@@ -2,6 +2,8 @@ from rest_framework import serializers
 from .models import Country
 
 class CountrySerializer(serializers.ModelSerializer):
+    exchange_rate = serializers.DecimalField(max_digits=10, decimal_places=2, required=False, allow_null=True)
+    estimated_gdp = serializers.DecimalField(max_digits=20, decimal_places=1, required=False, allow_null=True)
     class Meta:
         model = Country
         fields = '__all__'

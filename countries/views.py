@@ -50,9 +50,9 @@ class RefreshCountriesView(APIView):
                     exchange_rate = None
                     estimated_gdp = None
                     if currency_code and currency_code in exchange_rates:
-                        exchange_rate = float(exchange_rates[currency_code])
+                        exchange_rate = exchange_rates[currency_code]
                         random_multiplier = random.randint(1000, 2000)
-                        estimated_gdp = float((population * random_multiplier) / exchange_rate)
+                        estimated_gdp = (population * random_multiplier) / exchange_rate
 
                     country_obj, created = Country.objects.get_or_create(
                         name__iexact=name,
