@@ -2,11 +2,18 @@ from rest_framework import serializers
 from .models import Country
 
 class CountrySerializer(serializers.ModelSerializer):
-    exchange_rate = serializers.DecimalField(max_digits=10, decimal_places=2, required=False, allow_null=True)
-    estimated_gdp = serializers.DecimalField(max_digits=20, decimal_places=1, required=False, allow_null=True)
     class Meta:
         model = Country
         fields = '__all__'
+
+    def to_representation(self, instance):
+        representation = super().to_representation(instance)
+        # Convert Decimal fields to float with specified decimal places
+        if representation.get('exchange_rate') is not None:
+            representation['exchange_rate'] = round(float(representation['exchange_rate']), 2)
+        if representation.get('estimated_gdp') is not None:
+            representation['estimated_gdp'] = round(float(representation['estimated_gdp']), 1)
+        return representation
 
     def validate(self, data):
         errors = {}
