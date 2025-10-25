@@ -161,7 +161,7 @@ class DeleteCountryView(APIView):
         try:
             country = Country.objects.get(name__iexact=name)
             country.delete()
-            return Response({'message': 'Country deleted successfully'}, status=status.HTTP_200_OK)
+            return Response(status=status.HTTP_204_NO_CONTENT)
         except Country.DoesNotExist:
             return Response({'error': 'Country not found'}, status=status.HTTP_404_NOT_FOUND)
 
