@@ -12,71 +12,72 @@ import os
 from datetime import datetime
 from .models import Country
 from .serializers import CountrySerializer
+from django.conf import settings
 
 class RefreshCountriesView(APIView):
     def post(self, request):
         try:
             # Fetch countries data
-            countries_response = requests.get('https://restcountries.com/v2/all?fields=name,capital,region,population,flag,currencies', timeout=10)
+            countries_response = requests.get(settings.COUNTRY_DATA_API, timeout=10)
             countries_response.raise_for_status()
             countries_data = countries_response.json()
 
             # Fetch exchange rates
-            rates_response = requests.get('https://open.er-api.com/v6/latest/USD', timeout=10)
+            rates_response = requests.get(settings.EXCHANGE_RATE_API, timeout=10)
             rates_response.raise_for_status()
             rates_data = rates_response.json()
             exchange_rates = rates_data.get('rates', {})
 
-            countries_to_create = []
-            countries_to_update = []
-
-            for country in countries_data:
-                name = country.get('name')
-                if not name:
-                    continue
-
-                capital = country.get('capital')
-                region = country.get('region')
-                population = country.get('population')
-                flag_url = country.get('flag')
-
-                currencies = country.get('currencies', [])
-                currency_code = None
-                if currencies:
-                    currency_code = currencies[0].get('code')
-
-                exchange_rate = None
-                estimated_gdp = None
-                if currency_code and currency_code in exchange_rates:
-                    exchange_rate = exchange_rates[currency_code]
-                    random_multiplier = random.randint(1000, 2000)
-                    estimated_gdp = (population * random_multiplier) / exchange_rate
-
-                country_obj, created = Country.objects.get_or_create(
-                    name__iexact=name,
-                    defaults={
-                        'name': name,
-                        'capital': capital,
-                        'region': region,
-                        'population': population,
-                        'currency_code': currency_code,
-                        'exchange_rate': exchange_rate,
-                        'estimated_gdp': estimated_gdp,
-                        'flag_url': flag_url,
-                    }
-                )
-
-                if not created:
-                    country_obj.capital = capital
-                    country_obj.region = region
-                    country_obj.population = population
-                    country_obj.currency_code = currency_code
-                    country_obj.exchange_rate = exchange_rate
-                    country_obj.estimated_gdp = estimated_gdp
-                    country_obj.flag_url = flag_url
-                    countries_to_update.append(country_obj)
-
             with transaction.atomic():
+                countries_to_create = []
+                countries_to_update = []
+
+                for country in countries_data:
+                    name = country.get('name')
+                    if not name:
+                        continue
+
+                    capital = country.get('capital')
+                    region = country.get('region')
+                    population = country.get('population')
+                    flag_url = country.get('flag')
+
+                    currencies = country.get('currencies', [])
+                    currency_code = None
+                    if currencies:
+                        currency_code = currencies[0].get('code')
+
+                    exchange_rate = None
+                    estimated_gdp = None
+                    if currency_code and currency_code in exchange_rates:
+                        exchange_rate = exchange_rates[currency_code]
+                        random_multiplier = random.randint(1000, 2000)
+                        estimated_gdp = (population * random_multiplier) / exchange_rate
+
+                    country_obj, created = Country.objects.get_or_create(
+                        name__iexact=name,
+                        defaults={
+                            'name': name,
+                            'capital': capital,
+                            'region': region,
+                            'population': population,
+                            'currency_code': currency_code,
+                            'exchange_rate': exchange_rate,
+                            'estimated_gdp': estimated_gdp,
+                            'flag_url': flag_url,
+                        }
+                    )
+
+                    if not created:
+                        country_obj.capital = capital
+                        country_obj.region = region
+                        country_obj.population = population
+                        country_obj.currency_code = currency_code
+                        country_obj.exchange_rate = exchange_rate
+                        country_obj.estimated_gdp = estimated_gdp
+                        country_obj.flag_url = flag_url
+                        countries_to_update.append(country_obj)
+
                 if countries_to_update:
                     Country.objects.bulk_update(countries_to_update, ['capital', 'region', 'population', 'currency_code', 'exchange_rate', 'estimated_gdp', 'flag_url'])
 
@@ -86,7 +87,14 @@ class RefreshCountriesView(APIView):
             return Response({'message': 'Countries refreshed successfully'}, status=status.HTTP_200_OK)
 
         except requests.RequestException as e:
-            return Response({'error': 'External data source unavailable', 'details': f'Could not fetch data from {e.request.url}'}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+            # Determine which API failed based on the exception context
+            if 'restcountries' in str(e):
+                api_name = 'restcountries.com'
+            elif 'open.er-api' in str(e):
+                api_name = 'open.er-api.com'
+            else:
+                api_name = 'open.er-api.com'  # Default fallback
+            return Response({'error': 'External data source unavailable', 'details': f'Could not fetch data from {api_name}'}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
 
     def generate_summary_image(self):
         total_countries = Country.objects.count()
