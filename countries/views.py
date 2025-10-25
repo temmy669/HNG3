@@ -169,7 +169,7 @@ class StatusView(APIView):
     def get(self, request):
         total_countries = Country.objects.count()
         last_refresh = Country.objects.order_by('-last_refreshed_at').first()
-        last_refreshed_at = last_refresh.last_refreshed_at.isoformat() if last_refresh else None
+        last_refreshed_at = last_refresh.last_refreshed_at if last_refresh else None
         return Response({
             'total_countries': total_countries,
             'last_refreshed_at': last_refreshed_at
