@@ -80,7 +80,7 @@ WSGI_APPLICATION = 'HNG3.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
-        'NAME': config('MYSQL_DATABASE'),
+        'NAME': config('MYSQLDATABASE'),
         'USER': config('MYSQLUSER'),
         'PASSWORD': config('MYSQLPASSWORD'),
         'HOST': config('MYSQLHOST'),
